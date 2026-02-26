@@ -34,25 +34,21 @@ def evaluate_response_quality(question: str, answer: str, contexts: List[str]) -
         api_key=get_openai_api_key(),
         base_url="https://openai.vocareum.com/v1",
         model="gpt-3.5-turbo", temperature=0))
-    
     embeddings = LangchainEmbeddingsWrapper(OpenAIEmbeddings(
         api_key=get_openai_api_key(),
         base_url="https://openai.vocareum.com/v1",
         model="text-embedding-3-small"))
 
-
-
+    # Use alternative metrics as requested
     metrics = [
-        faithfulness,
-        answer_relevancy,
-        context_precision,
-        context_recall,
-        answer_correctness,
-        answer_similarity,
+        BleuScore(),
+        NonLLMContextPrecisionWithReference(),
+        ResponseRelevancy(),
+        Faithfulness(),
+        RougeScore(),
     ]
 
     # Prepare data as DataFrame for ragas
-
     import pandas as pd
     from datasets import Dataset
     data = pd.DataFrame([
@@ -60,7 +56,8 @@ def evaluate_response_quality(question: str, answer: str, contexts: List[str]) -
             "question": question,
             "answer": answer,
             "contexts": contexts,
-            "reference": answer,  # Use 'reference' (not 'references') for RAGAS metrics
+            "reference": answer,
+            "reference_contexts": contexts,
         }
     ])
     dataset = Dataset.from_pandas(data)

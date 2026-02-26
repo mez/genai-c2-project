@@ -11,3 +11,11 @@ is, to land two men on the lunar surface and return them safely to earth.
 3.
 Q: Which German Chancellor entered the fire room for apollo13 mission?
 A: Willie Brant
+
+4.
+Q: How many nautical miles from earth was the Apollo 11 spacecraft at 6 hours, 31 minutes?
+A: the spacecraft is 29,363 nautical miles from earth
+
+5.
+Q: Where are the Spacecraft lift-off switch positions  listed? 
+A: In the Apollo Operations Handbook (Volume 2) for CSM 107.
