@@ -70,6 +70,19 @@ def evaluate_response_quality(question: str, answer: str, contexts: List[str]) -
         embeddings=embeddings
     )
 
-    # Extract scores for each metric
-    scores = {metric.name: float(results[metric.name][0]) for metric in metrics if metric.name in results}
+    # Extract scores for each metric robustly
+    scores = {}
+    for metric in metrics:
+        name = metric.name
+        try:
+            val = results[name]
+            # Handle list or scalar
+            if isinstance(val, list) and val:
+                scores[name] = float(val[0])
+            elif isinstance(val, (int, float)):
+                scores[name] = float(val)
+            else:
+                scores[name] = float(val) if val is not None else None
+        except (KeyError, Exception):
+            scores[name] = None
     return scores

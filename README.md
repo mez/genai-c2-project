@@ -21,6 +21,8 @@ By completing this project, students will learn to:
 ├── llm_client.py           # OpenAI LLM client wrapper (TODO-based)
 ├── rag_client.py           # RAG system client (TODO-based)
 ├── ragas_evaluator.py      # RAGAS evaluation metrics (TODO-based)
+├── batch_evaluate.py       # Batch evaluation script (loads evaluation_dataset.txt)
+├── evaluation_dataset.txt  # Evaluation dataset (mission-related Q&A)
 ├── requirements.txt        # Python dependencies
 └── README.md              # This file
 ```
@@ -328,3 +330,40 @@ When submitting your completed project:
 ---
 
 **Good luck with your RAG system implementation!** This project will give you hands-on experience with modern AI application development, from data processing to user interface design. Take your time with each component and don't hesitate to experiment with different approaches and parameters.
+
+## 📊 Evaluation Dataset & Batch Evaluation
+
+### Evaluation Dataset
+- The file `evaluation_dataset.txt` contains at least 5 mission-related questions and reference answers.
+- Format: Each entry has a `Q:` (question) and `A:` (reference answer), separated by blank lines.
+- This dataset is used for automated, repeatable evaluation of the RAG system.
+
+### Batch Evaluation Script
+- The script `batch_evaluate.py` loads `evaluation_dataset.txt`, runs retrieval, answer generation, and RAGAS evaluation for each question.
+- Outputs per-question metric results and aggregate metric summaries (mean, std, min, max for each metric).
+
+#### Usage
+```bash
+python batch_evaluate.py
+```
+- Optional arguments:
+  - `--eval-file PATH` (default: evaluation_dataset.txt)
+  - `--collection NAME` (default: auto-detects first available)
+  - `--n-docs N` (default: 3)
+  - `--model MODEL` (default: gpt-3.5-turbo)
+
+#### Example Output
+```
+Evaluating 5 questions...
+Q1: how many days before the mission ...
+  Reference: It is dated July 1, 1969 ...
+  Answer: It was received ...
+  Metrics: {'bleu_score': 0.52, ...}
+
+Aggregate metric summary:
+  bleu_score: mean=0.41 std=0.12 min=0.22 max=0.56
+  ...
+```
+
+- The script can be used to benchmark system changes and compare models or retrieval settings.
+- See the script for more details on output and customization.
