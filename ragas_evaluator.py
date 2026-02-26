@@ -3,6 +3,17 @@ from ragas.embeddings import LangchainEmbeddingsWrapper
 from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
 from typing import Dict, List, Optional
+    # Import correct metrics from ragas.metrics
+from ragas.metrics import (
+        faithfulness,
+        answer_relevancy,
+        context_precision,
+        context_recall,
+        answer_correctness,
+        answer_similarity,
+    )
+
+from utils import get_openai_api_key
 
 # RAGAS imports
 try:
@@ -17,11 +28,51 @@ def evaluate_response_quality(question: str, answer: str, contexts: List[str]) -
     """Evaluate response quality using RAGAS metrics"""
     if not RAGAS_AVAILABLE:
         return {"error": "RAGAS not available"}
-    
-    # TODO: Create evaluator LLM with model gpt-3.5-turbo
-    # TODO: Create evaluator_embeddings with model test-embedding-3-small
-    # TODO: Define an instance for each metric to evaluate
-    # TODO: Evaluate the response using the metrics
-    # TODO: Return the evaluation results
 
-    pass
+    # Instantiate LLM and embeddings wrappers (no keyword args)
+    llm = LangchainLLMWrapper(ChatOpenAI(
+        api_key=get_openai_api_key(),
+        base_url="https://openai.vocareum.com/v1",
+        model="gpt-3.5-turbo", temperature=0))
+    
+    embeddings = LangchainEmbeddingsWrapper(OpenAIEmbeddings(
+        api_key=get_openai_api_key(),
+        base_url="https://openai.vocareum.com/v1",
+        model="text-embedding-3-small"))
+
+
+
+    metrics = [
+        faithfulness,
+        answer_relevancy,
+        context_precision,
+        context_recall,
+        answer_correctness,
+        answer_similarity,
+    ]
+
+    # Prepare data as DataFrame for ragas
+
+    import pandas as pd
+    from datasets import Dataset
+    data = pd.DataFrame([
+        {
+            "question": question,
+            "answer": answer,
+            "contexts": contexts,
+            "reference": answer,  # Use 'reference' (not 'references') for RAGAS metrics
+        }
+    ])
+    dataset = Dataset.from_pandas(data)
+
+    # Evaluate
+    results = evaluate(
+        dataset,
+        metrics=metrics,
+        llm=llm,
+        embeddings=embeddings
+    )
+
+    # Extract scores for each metric
+    scores = {metric.name: float(results[metric.name][0]) for metric in metrics if metric.name in results}
+    return scores
