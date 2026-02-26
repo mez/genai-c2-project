@@ -29,60 +29,71 @@ def evaluate_response_quality(question: str, answer: str, contexts: List[str]) -
     if not RAGAS_AVAILABLE:
         return {"error": "RAGAS not available"}
 
-    # Instantiate LLM and embeddings wrappers (no keyword args)
-    llm = LangchainLLMWrapper(ChatOpenAI(
-        api_key=get_openai_api_key(),
-        base_url="https://openai.vocareum.com/v1",
-        model="gpt-3.5-turbo", temperature=0))
-    embeddings = LangchainEmbeddingsWrapper(OpenAIEmbeddings(
-        api_key=get_openai_api_key(),
-        base_url="https://openai.vocareum.com/v1",
-        model="text-embedding-3-small"))
+    # Defensive: check for empty/malformed input
+    if not question or not isinstance(question, str):
+        return {"error": "Empty or invalid question"}
+    if not answer or not isinstance(answer, str):
+        return {"error": "Empty or invalid answer"}
+    if not contexts or not isinstance(contexts, list) or not all(isinstance(c, str) for c in contexts):
+        return {"error": "Empty or invalid contexts"}
 
-    # Use alternative metrics as requested
-    metrics = [
-        BleuScore(),
-        NonLLMContextPrecisionWithReference(),
-        ResponseRelevancy(),
-        Faithfulness(),
-        RougeScore(),
-    ]
+    try:
+        # Instantiate LLM and embeddings wrappers (no keyword args)
+        llm = LangchainLLMWrapper(ChatOpenAI(
+            api_key=get_openai_api_key(),
+            base_url="https://openai.vocareum.com/v1",
+            model="gpt-3.5-turbo", temperature=0))
+        embeddings = LangchainEmbeddingsWrapper(OpenAIEmbeddings(
+            api_key=get_openai_api_key(),
+            base_url="https://openai.vocareum.com/v1",
+            model="text-embedding-3-small"))
 
-    # Prepare data as DataFrame for ragas
-    import pandas as pd
-    from datasets import Dataset
-    data = pd.DataFrame([
-        {
-            "question": question,
-            "answer": answer,
-            "contexts": contexts,
-            "reference": answer,
-            "reference_contexts": contexts,
-        }
-    ])
-    dataset = Dataset.from_pandas(data)
+        # Use alternative metrics as requested
+        metrics = [
+            BleuScore(),
+            NonLLMContextPrecisionWithReference(),
+            ResponseRelevancy(),
+            Faithfulness(),
+            RougeScore(),
+        ]
 
-    # Evaluate
-    results = evaluate(
-        dataset,
-        metrics=metrics,
-        llm=llm,
-        embeddings=embeddings
-    )
+        # Prepare data as DataFrame for ragas
+        import pandas as pd
+        from datasets import Dataset
+        data = pd.DataFrame([
+            {
+                "question": question,
+                "answer": answer,
+                "contexts": contexts,
+                "reference": answer,
+                "reference_contexts": contexts,
+            }
+        ])
+        dataset = Dataset.from_pandas(data)
 
-    # Extract scores for each metric robustly
-    scores = {}
-    for metric in metrics:
-        name = metric.name
-        try:
-            val = results[name]
-            # Handle list or scalar
-            if isinstance(val, list) and val:
-                scores[name] = float(val[0])
-            elif isinstance(val, (int, float)):
-                scores[name] = float(val)
-            else:
-                scores[name] = float(val) if val is not None else None
-        except (KeyError, Exception):
-            scores[name] = None
-    return scores
+        # Evaluate
+        results = evaluate(
+            dataset,
+            metrics=metrics,
+            llm=llm,
+            embeddings=embeddings
+        )
+
+        # Extract scores for each metric robustly
+        scores = {}
+        for metric in metrics:
+            name = metric.name
+            try:
+                val = results[name]
+                # Handle list or scalar
+                if isinstance(val, list) and val:
+                    scores[name] = float(val[0])
+                elif isinstance(val, (int, float)):
+                    scores[name] = float(val)
+                else:
+                    scores[name] = float(val) if val is not None else None
+            except (KeyError, Exception):
+                scores[name] = None
+        return scores
+    except Exception as e:
+        return {"error": f"Evaluation failed: {str(e)}"}

@@ -76,30 +76,37 @@ def main():
     for idx, item in enumerate(eval_items, 1):
         q = item["question"]
         ref = item["reference_answer"]
-        # Retrieve docs
-        docs_result = retrieve_documents(collection, q, args.n_docs)
-        if docs_result and docs_result.get("documents"):
-            context = format_context(docs_result["documents"][0], docs_result["metadatas"][0])
-            contexts_list = docs_result["documents"][0]
-        else:
-            context = ""
-            contexts_list = []
-        # Generate answer
-        answer = generate_response(q, context, [], args.model)
-        # Evaluate
-        metrics = evaluate_response_quality(q, answer, contexts_list)
+        try:
+            # Retrieve docs
+            docs_result = retrieve_documents(collection, q, args.n_docs)
+            if docs_result and docs_result.get("documents"):
+                context = format_context(docs_result["documents"][0], docs_result["metadatas"][0])
+                contexts_list = docs_result["documents"][0]
+            else:
+                context = ""
+                contexts_list = []
+            # Generate answer
+            answer = generate_response(q, context, [], args.model)
+            # Evaluate
+            metrics = evaluate_response_quality(q, answer, contexts_list)
+        except Exception as e:
+            metrics = {"error": f"Exception during evaluation: {str(e)}"}
+            answer = "[ERROR: Could not generate answer]"
         all_metrics.append(metrics)
         print(f"Q{idx}: {q}\n  Reference: {ref}\n  Answer: {answer}")
         print(f"  Metrics: {metrics}\n")
 
-    # Aggregate metrics
-    if all_metrics:
-        metric_names = all_metrics[0].keys()
+    # Aggregate metrics (only valid results)
+    valid_metrics = [x for x in all_metrics if not x.get("error")]
+    if valid_metrics:
+        metric_names = valid_metrics[0].keys()
         print("Aggregate metric summary:")
         for m in metric_names:
-            vals = [x[m] for x in all_metrics if m in x and isinstance(x[m], (int, float))]
+            vals = [x[m] for x in valid_metrics if m in x and isinstance(x[m], (int, float))]
             if vals:
                 print(f"  {m}: mean={statistics.mean(vals):.3f} std={statistics.stdev(vals) if len(vals)>1 else 0:.3f} min={min(vals):.3f} max={max(vals):.3f}")
+    else:
+        print("No valid metrics to aggregate.")
 
 if __name__ == "__main__":
     main()

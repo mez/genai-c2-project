@@ -55,11 +55,16 @@ def discover_chroma_backends() -> Dict[str, Dict[str, str]]:
 def initialize_rag_system(chroma_dir: str, collection_name: str):
     """Initialize the RAG system with specified backend (cached for performance)"""
     try:
+        from utils import get_openai_client
+        from openai_client_embedding_function import OpenAIClientEmbeddingFunction
         client = chromadb.PersistentClient(
             path=chroma_dir,
             settings=Settings(allow_reset=False, anonymized_telemetry=False)
         )
-        collection = client.get_collection(collection_name)
+        openai_client = get_openai_client()
+        embedding_function = OpenAIClientEmbeddingFunction(openai_client=openai_client)
+        # Always pass embedding_function when getting collection
+        collection = client.get_collection(collection_name, embedding_function=embedding_function)
         return collection, True, None
     except Exception as e:
         return None, False, str(e)
